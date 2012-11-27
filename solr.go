@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -269,10 +270,23 @@ func EncodeURLParamMap(m *URLParamMap) string {
 }
 
 /*
+* Generates the first part of the URL for queries and updates.
+ */
+func SolrUrlString(c *Connection) (s string) {
+	if c.Core != "" {
+		s = fmt.Sprintf("http://%s:%d/solr/%s", c.Host, c.Port, c.Core)
+	} else {
+		s = fmt.Sprintf("http://%s:%d/solr", c.Host, c.Port)
+	}
+	log.Printf("URL is %v", s)
+	return
+}
+
+/*
  * Generates a Solr query string from a connection and a query string
  */
 func SolrSelectString(c *Connection, q string) string {
-	return fmt.Sprintf("http://%s:%d/solr/select?wt=json&%s", c.Host, c.Port, q)
+	return fmt.Sprintf("%s/select?wt=json&%s", SolrUrlString(c), q)
 }
 
 /*
@@ -280,7 +294,9 @@ func SolrSelectString(c *Connection, q string) string {
  * if commit arg is true.
  */
 func SolrUpdateString(c *Connection, commit bool) string {
-	s := fmt.Sprintf("http://%s:%d/solr/update", c.Host, c.Port)
+
+	s := fmt.Sprintf("%s/update/json", SolrUrlString(c))
+
 	if commit {
 		return fmt.Sprintf("%s?commit=true", s)
 	}
@@ -521,6 +537,7 @@ func (c *Connection) Update(m map[string]interface{}, commit bool) (*UpdateRespo
 	}
 
 	// decode the response & check
+	log.Printf("Response was %v", string(resp))
 	decoded, err := BytesToJSON(&resp)
 	if err != nil {
 		return nil, err
